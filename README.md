@@ -1,2 +1,2 @@
 # angularjs-template
-一个angularjs模板，采用webpack构建项目，针对angularjs中大量的templateUrl，做了特别处理
+一个angularjs模板，采用webpack构建项目，针对angularjs中大量的templateUrl，添加了对应loader，并处理了加载的模板中img的src路径问题
