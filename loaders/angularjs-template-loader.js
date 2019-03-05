@@ -29,23 +29,29 @@ function copyFile(filePath) {
 
 module.exports = function (source) {
   const { resourcePath } = this
+  const ext = path.extname(resourcePath)
   // 模板路径正则
   const tempRegexp = /templateUrl\:\s*['"](\S+\.html)['"]/g
   // 匹配模板中的src，替换路径
   const srcRegexp = /src\=['"](\S+\.(?:png|jpe?g|gif|svg))['"]/g
 
-  return source.replace(tempRegexp, function (match, relativePath) {
-    // 根据相对路径解析出模板绝对路径
-    let htmlPath = path.resolve(path.dirname(resourcePath), relativePath)
-    let htmlStr = fs.readFileSync(htmlPath).toString()
-    // 替换html中src路径
-    htmlStr = htmlStr.replace(srcRegexp, function (match, src) {
-      let imgPath = path.resolve(path.dirname(htmlPath), src)
-      let publicPath = copyFile(imgPath)
-      return `src="${publicPath}"`
+  if (ext === ".js") {
+    return source.replace(tempRegexp, function (match, relativePath) {
+      // 根据相对路径解析出模板绝对路径
+      let htmlPath = path.resolve(path.dirname(resourcePath), relativePath)
+      return `template: require("${htmlPath.replace(/\\/g, "\\\\")}")`
     })
+  } else if (ext === ".html") {
+    // 替换html中src路径
+    const result = source
+      .replace(srcRegexp, function (match, src) {
+        let imgPath = path.resolve(path.dirname(resourcePath), src)
+        let publicPath = copyFile(imgPath)
+        return `src="${publicPath}"`
+      })
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029')
 
-    return `template: \`${htmlStr}\``
-  })
-
+    return `module.exports = \`${result}\``;
+  }
 }
