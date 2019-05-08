@@ -7,24 +7,39 @@ const fs = require("fs")
 const path = require("path")
 const config = require("../config")
 
+function safeWriteFileSync(filePath = "", fileBuffer) {
+  let dirCell = filePath.split(path.sep)
+  dirCell.reduce((prev, next) => {
+    if (!fs.existsSync(prev)) {
+      fs.mkdirSync(prev)
+    }
+    return [prev, next].join(path.sep)
+  })
+  fs.writeFileSync(filePath, fileBuffer)
+}
+
 function copyFile(filePath) {
+  let fileBuffer = fs.readFileSync(filePath)
+  if (process.env.NODE_ENV !== 'production') {
+    return "data:image/png;base64," + fileBuffer.toString("base64")
+  }
+
   let filename = path.basename(filePath)
 
   let configPart = process.env.NODE_ENV === 'production' ? config.build : config.dev;
-  let { assetsSubDirectory, assetsPublicPath } = configPart
-  let root = path.join(process.cwd(), assetsPublicPath)
+  let { assetsSubDirectory, assetsPublicPath, assetsRoot } = configPart
 
-  let targetPath = path.resolve(root, assetsSubDirectory, filename)
+  let compiledPath = path.join(assetsSubDirectory, "img", filename)
 
-  if (!fs.existsSync(targetPath)) {
-    fs.writeFileSync(targetPath, fs.readFileSync(filePath))
-  }
+  let targetPath = path.resolve(assetsRoot, compiledPath)
+
+  safeWriteFileSync(targetPath, fileBuffer)
 
   if (assetsPublicPath.slice(-1) === "/") {
-    return assetsPublicPath + assetsSubDirectory + "/" + filename
+    return assetsPublicPath + compiledPath
   }
 
-  return [assetsPublicPath, assetsSubDirectory, filename].join("/")
+  return [assetsPublicPath, compiledPath].join("/")
 }
 
 module.exports = function (source) {
@@ -52,6 +67,6 @@ module.exports = function (source) {
       .replace(/\u2028/g, '\\u2028')
       .replace(/\u2029/g, '\\u2029')
 
-    return `module.exports = \`${result}\``;
+    return `module.exports = ${JSON.stringify(result)}`;
   }
 }
